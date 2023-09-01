@@ -2,9 +2,14 @@ import torch
 import cv2
 import time 
 
-model = torch.hub.load("ultralytics/yolov5", "custom", path="v5.pt", device="cuda:0")
+#model = torch.hub.load("ultralytics/yolov5", "yolov5s", device="mps")
+
+model = torch.hub.load("ultralytics/yolov5", "custom", path="v9.pt", device="mps")
+#print(model.imgsz)
+#model.imgsz= (1280,1280)
 names = model.names
-model.conf = 0.8
+print(names)
+model.conf = 0.9
 #model.classes = [0]
 # Open the video file
 video_path = "distance.mp4"  # Replace with your video file path
@@ -37,8 +42,16 @@ while True:
             id = int(output[5])
             x1, y1, x2, y2 = bbox
             x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 255), 2)
-            cv2.putText(frame, f"{names[id]} {conf:.2f}", (x1 + 10, y1 - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
+            
+            if names[id] =="sari":
+                color= (20,244,244)
+            elif names[id] =="mavi":
+                color = (255,20,20)
+            else:
+               color = (250,20,250)
+            
+            cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+            cv2.putText(frame, f"{names[id]} {conf:.2f}", (x1 + 10, y1 - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
             
     #out.write(frame)
     fps = int(1 / (time.time() - last_time))

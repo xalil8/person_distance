@@ -1,4 +1,3 @@
-import os
 import torch
 import cv2
 import math
@@ -9,12 +8,15 @@ from collections import defaultdict, deque
 from trackers.multi_tracker_zoo import create_tracker
 
 # Load the detection model
-model = torch.hub.load("ultralytics/yolov5", "custom", path="v5.pt", device="cuda:0")
-model.conf = 0.5
+#model = torch.hub.load("ultralytics/yolov5", "custom", path="v6.pt", device="mps")
+model = torch.hub.load("ultralytics/yolov5", "yolov5s", device="mps")
+
+model.conf = 0.7
 class_names = model.names
+print(class_names)
 model.classes = [0]
 
-tracker_list = create_tracker(f'ocsort', f"trackers/ocsort/configs/ocsort.yaml","weights/osnet_x0_25_msmt17.pt", device=torch.device("cuda:0"), half=False)
+tracker_list = create_tracker(f'ocsort', f"trackers/ocsort/configs/ocsort.yaml","weights/osnet_x0_25_msmt17.pt", device=torch.device("mps"), half=False)
 
 # Open the video capture
 source_video_path = "distance.mp4"
@@ -44,7 +46,8 @@ def process_person_pairs():
     # Remove pairs outside the loop
     for pair in pairs_to_remove:
         del person_pairs[pair]
-fps = 18
+fps = 20
+
 while video_cap.isOpened():
     last_time = time.time()
 
@@ -81,7 +84,7 @@ while video_cap.isOpened():
                 bbox_id2 = outputs[i+1][:4]
                 
                 distance = np.linalg.norm(np.array(bbox_id1)[:2] - np.array(bbox_id2)[:2])
-                
+
                 if distance <= distance_threshold:
                     person_pairs[pair_key].append(1 / fps)  # Add frame duration to pair
                     # Draw a line between the persons
@@ -89,6 +92,10 @@ while video_cap.isOpened():
                     # Write distance on the line
                     cv2.putText(frame, f"{distance:.2f}", (int((bbox_id1[0] + bbox_id2[0]) / 2), int((bbox_id1[1] + bbox_id2[1]) / 2)),
                                 cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 6)
+                else:
+                    cv2.line(frame, (int(bbox_id1[0]), int(bbox_id1[1])), (int(bbox_id2[0]), int(bbox_id2[1])), (0, 0, 255), 6)
+                    # Write distance on the line
+                    cv2.putText(frame, f"{distance:.2f}", (int((bbox_id1[0] + bbox_id2[0]) / 2), int((bbox_id1[1] + bbox_id2[1]) / 2)),cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 6)
 
     # Process person pairs every check_interval seconds
     if int(time.time() - last_time) % check_interval == 0:
@@ -98,17 +105,17 @@ while video_cap.isOpened():
     total_time_text = "Total Time: "
     for pair, time_list in person_pairs.items():
         total_time = sum(time_list)
-        total_time_text += f"{pair}: {total_time:.2f}s, "
-    cv2.putText(frame, total_time_text, (1800, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 9)
+        total_time_text += f"{pair}: {total_time:.2f}s||||||  "
+    cv2.putText(frame, total_time_text, (700, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.4, (0, 255, 255), 5)
 
     fps = int(1 / (time.time() - last_time))
     cv2.putText(frame, f"{fps}", (30, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (209, 20, 209), 4)
-    frame = cv2.resize(frame, (1080, 720))
+    frame = cv2.resize(frame, (800, 520))
 
     cv2.imshow("Frame", frame)
 
     # Press 'q' to exit
-    if cv2.waitKey(1) & 0xFF == ord('q'):
+    if cv2.waitKey(100) & 0xFF == ord('q'):
         break
 
 # Release resources
