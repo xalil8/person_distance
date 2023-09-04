@@ -15,23 +15,6 @@ model.classes = [0]
 tracker_list = create_tracker(f'ocsort', f"trackers/ocsort/configs/ocsort.yaml", "weights/osnet_x0_25_msmt17.pt", device=torch.device("mps"), half=False)
 
 
-# def clean_dict(main_dict):
-    
-#     keys_to_delete = []  # Create a list to store keys to delete
-
-#     for pair_key, pair_data in main_dict.items():
-#         if len(main_dict[pair_key]["elements"]) == main_dict[pair_key]["size"] :
-#             keys_to_delete.append(pair_key)
-#             print(f"{pair_key}, DELETED")
-#         else:
-#             pair_data["size"] = len(pair_data["elements"])
-
-#     # Delete items outside the loop
-#     for key in keys_to_delete:
-#         del main_dict[key]
-
-#     return main_dict
-
 def clean_dict(main_dict,count):
     
     keys_to_delete = []  # Create a list to store keys to delete
