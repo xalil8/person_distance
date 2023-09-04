@@ -14,6 +14,37 @@ class_names = model.names
 model.classes = [0]
 tracker_list = create_tracker(f'ocsort', f"trackers/ocsort/configs/ocsort.yaml", "weights/osnet_x0_25_msmt17.pt", device=torch.device("mps"), half=False)
 
+
+# def clean_dict(main_dict):
+    
+#     keys_to_delete = []  # Create a list to store keys to delete
+
+#     for pair_key, pair_data in main_dict.items():
+#         if len(main_dict[pair_key]["elements"]) == main_dict[pair_key]["size"] :
+#             keys_to_delete.append(pair_key)
+#             print(f"{pair_key}, DELETED")
+#         else:
+#             pair_data["size"] = len(pair_data["elements"])
+
+#     # Delete items outside the loop
+#     for key in keys_to_delete:
+#         del main_dict[key]
+
+#     return main_dict
+
+def clean_dict(main_dict,count):
+    
+    keys_to_delete = []  # Create a list to store keys to delete
+
+    for pair_key, pair_data in main_dict.items():
+        if (count - sliding_windows[pair_key]["last_count"] > disappear_limit):
+            keys_to_delete.append(pair_key)
+            print(f"{pair_key} CLEANED")
+    # Delete items outside the loop
+    for key in keys_to_delete:
+        del main_dict[key]
+    return main_dict
+
 # Open the video capture
 source_video_path = "distance.mp4"
 video_cap = cv2.VideoCapture(source_video_path)
@@ -25,18 +56,19 @@ distance_threshold = 400  # in pixels
 check_interval = 15 * 60  # 15 minutes in seconds
 
 # Define the sliding window size
-window_size = 1000
-
+window_size = 30
+disappear_limit = 50
 # Dictionary to store sliding windows for each person pair
 sliding_windows = {}
-
+counter = 0
 while video_cap.isOpened():
+    counter += 1 
     last_time = time.time()
 
     ret, frame = video_cap.read()
     if not ret:
         break
-
+    
     tracking_list = []
 
     results = model(frame)
@@ -65,21 +97,23 @@ while video_cap.isOpened():
             distance = int(np.linalg.norm(np.array(center1) - np.array(center2)))
 
             if pair_key not in sliding_windows:
-                sliding_windows[pair_key] = deque(maxlen=window_size)
+                sliding_windows[pair_key] = {"elements":deque(maxlen=window_size),"last_count":None}
+                #sliding_windows[pair_key] = deque(maxlen=window_size)
 
+            sliding_windows[pair_key]["last_count"] = counter
             # Label the frame based on distance
             if distance < distance_threshold:
                 color = (0, 0, 255)
-                sliding_windows[pair_key].append(True)
+                sliding_windows[pair_key]["elements"].append(True)
             else:
                 color = (0, 255, 255)
-                sliding_windows[pair_key].append(False)
+                sliding_windows[pair_key]["elements"].append(False)
 
             # Check if %80 of the 100 elements in the sliding window are True
-            if len(sliding_windows[pair_key]) == window_size and sliding_windows[pair_key].count(True) / window_size >= 0.8:
+            if len(sliding_windows[pair_key]) == window_size and sliding_windows[pair_key].count(True) / window_size >= 0.9:
                 # Add your desired logic here
-                print(f"Person {id1} and Person {id2} are close for 100 frames.")
-
+                pass
+            
             cv2.putText(frame, f"{distance}", (int((center1[0] + center2[0]) / 2), int((center1[1] + center2[1]) / 2)),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
             cv2.line(frame, (int(center1[0]), int(center1[1])), (int(center2[0]), int(center2[1])), color, 6)
@@ -89,16 +123,24 @@ while video_cap.isOpened():
             cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 255), 2)
             cv2.putText(frame, f"{str(int(conf * 100))}  person{id}", (x1 + 10, y1 - 20), cv2.FONT_HERSHEY_SIMPLEX,
                         0.8, (0, 0, 255), 2)
-            
-    message = f"Person {id1} and Person {id2}: {true_count}/{window_size} frames are True ({percentage:.2f}%)"
-    print(message)
-    
+
+        #print(sliding_windows["1-3"]["elements"])
     fps = int(1 / (time.time() - last_time))
     cv2.putText(frame, f"{fps}", (30, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (209, 20, 209), 4)
     frame = cv2.resize(frame, (800, 520))
 
-    cv2.imshow("Frame", frame)
 
+
+    if (counter %100) == 0:
+        print("CLEANING CHECKED ")
+        sliding_windows = clean_dict(sliding_windows,counter)
+            
+    for pair_key, pair_data in sliding_windows.items():
+        print(counter,sliding_windows[pair_key]["last_count"])
+    print("//////////////////////////////////////////////////")
+    
+    
+    cv2.imshow("Frame", frame)
     # Press 'q' to exit
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
@@ -106,3 +148,4 @@ while video_cap.isOpened():
 # Release resources
 video_cap.release()
 cv2.destroyAllWindows()
+
