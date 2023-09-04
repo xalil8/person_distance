@@ -17,7 +17,7 @@ model.classes = [0]
 tracker_list = create_tracker(f'ocsort', f"trackers/ocsort/configs/ocsort.yaml","weights/osnet_x0_25_msmt17.pt", device=torch.device("mps"), half=False)
 
 # Open the video capture
-source_video_path = "sari_yelek_v8.mp4"
+source_video_path = "distance.mp4"
 video_cap = cv2.VideoCapture(source_video_path)
 
 # Define the distance threshold for considering persons as close
