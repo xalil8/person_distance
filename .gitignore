@@ -12,6 +12,6 @@ sari_yelek_v1.mp4
 sari_yelek_v8.mp4
 v1.pt
 /__pycache__/*
-/trackers/__pycache__
-/trackers/bytetrack/__pycache__
-/trackers/ocsort/__pycache__
+/trackers/__pycache__/*
+/trackers/bytetrack/__pycache__/*
+/trackers/ocsort/__pycache__/*
