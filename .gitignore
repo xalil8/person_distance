@@ -15,3 +15,5 @@ v1.pt
 /trackers/__pycache__/*
 /trackers/bytetrack/__pycache__/*
 /trackers/ocsort/__pycache__/*
+.DS_Store
+**/.DS_Store
