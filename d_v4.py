@@ -14,18 +14,17 @@ class_names = model.names
 model.classes = [0]
 tracker_list = create_tracker(f'ocsort', f"trackers/ocsort/configs/ocsort.yaml", "weights/osnet_x0_25_msmt17.pt", device=torch.device("mps"), half=False)
 
-# H = np.array([[-5.11754792e+00, -4.55824434e+00  ,6.68141996e+03],
-#                 [-1.84946589e-01, -7.70514232e+00 , 3.14970818e+03],
-#                 [-1.21118016e-04, -7.97458811e-03,  1.00000000e+00]])
 
-H = np.array([[-1.03589760e+01 ,-1.03238523e+01 , 1.39468683e+04],
-                [-2.24633122e-01 ,-1.63955809e+01,  6.39756256e+03],
-                [ 2.95906560e-06, -8.95928977e-03 , 1.00000000e+00]])
+
+H = np.array([[-7.78384623e+00 ,-8.56667877e+00 , 1.05969372e+04],
+                [-3.71497720e-01 ,-1.29095458e+01 , 4.90599890e+03],
+                [-1.85412136e-04, -7.00396367e-03 , 1.00000000e+00]])
 
 def point_transform(x_old,y_old):
-    H = np.array([[-1.03589760e+01 ,-1.03238523e+01 , 1.39468683e+04],
-                    [-2.24633122e-01 ,-1.63955809e+01,  6.39756256e+03],
-                    [ 2.95906560e-06, -8.95928977e-03 , 1.00000000e+00]])
+    H = np.array([[-7.78384623e+00 ,-8.56667877e+00 , 1.05969372e+04],
+                    [-3.71497720e-01 ,-1.29095458e+01 , 4.90599890e+03],
+                    [-1.85412136e-04, -7.00396367e-03 , 1.00000000e+00]])
+
     # Create the homogeneous coordinate for the source point
     source_point = np.array([x_old, y_old, 1])
     # Perform the transformation
