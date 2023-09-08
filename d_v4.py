@@ -8,11 +8,11 @@ from trackers.multi_tracker_zoo import create_tracker
 import itertools
 
 # Load the detection model
-model = torch.hub.load("ultralytics/yolov5", "yolov5m", device="mps")
+model = torch.hub.load("ultralytics/yolov5", "yolov5m", device="cuda:0")
 model.conf = 0.5
 class_names = model.names
 model.classes = [0]
-tracker_list = create_tracker(f'ocsort', f"trackers/ocsort/configs/ocsort.yaml", "weights/osnet_x0_25_msmt17.pt", device=torch.device("mps"), half=False)
+tracker_list = create_tracker(f'ocsort', f"trackers/ocsort/configs/ocsort.yaml", "weights/osnet_x0_25_msmt17.pt", device=torch.device("cuda:0"), half=False)
 
 
 
@@ -99,7 +99,6 @@ while video_cap.isOpened():
 
 
 
-
     if det is not None and len(det):
         outputs = tracker_list.update(det.cpu(), frame)
 
@@ -131,7 +130,7 @@ while video_cap.isOpened():
             transformed_center2 = point_transform(center2[0],center2[1])
 
             transformed_frame = cv2.warpPerspective(frame, H, (frame.shape[1], frame.shape[0]))
-
+        
 
 
             # bird_eye_view = cv2.circle(bird_eye_view, (int(center1[0]),int(center1[1])), 5, (0, 0, 255), -1)
@@ -163,6 +162,10 @@ while video_cap.isOpened():
                 # Add your desired logic here
                 pass
             
+            #text = f"Pair {id1}-{id2}: {time_spent} seconds"
+            
+            #cv2.putText(frame, text, (800, (id1 + id2) * 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+
             cv2.putText(frame, f"{distance}", (int((center1[0] + center2[0]) / 2), int((center1[1] + center2[1]) / 2)),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
             cv2.line(frame, (int(center1[0]), int(center1[1])), (int(center2[0]), int(center2[1])), color, 6)
@@ -171,7 +174,7 @@ while video_cap.isOpened():
             cv2.putText(transformed_frame, f"{transformed_distance}", (int((transformed_center1[0] + transformed_center2[0]) / 2), int((transformed_center1[1] + transformed_center2[1]) / 2)),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
             cv2.line(transformed_frame, (int(transformed_center1[0]), int(transformed_center1[1])), (int(transformed_center2[0]), int(transformed_center2[1])), color, 6)
-
+            
 
 
         #print(sliding_windows["1-3"]["elements"])
@@ -194,11 +197,10 @@ while video_cap.isOpened():
     
     # bird_eye_view = cv2.resize(bird_eye_view, (800, 520))
     # bird_eye_view2 = cv2.resize(bird_eye_view2, (800, 520))
-    stacked = np.hstack((frame,transformed_frame))
+    #stacked = np.hstack((frame,transformed_frame))
     
     
-    
-    cv2.imshow("Frame1", stacked)
+    cv2.imshow("Frame1", frame)
     # Press 'q' to exit
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break

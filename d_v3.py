@@ -8,11 +8,11 @@ from trackers.multi_tracker_zoo import create_tracker
 import itertools
 
 # Load the detection model
-model = torch.hub.load("ultralytics/yolov5", "yolov5m", device="mps")
+model = torch.hub.load("ultralytics/yolov5", "yolov5m", device="cuda:0")
 model.conf = 0.5
 class_names = model.names
 model.classes = [0]
-tracker_list = create_tracker(f'ocsort', f"trackers/ocsort/configs/ocsort.yaml", "weights/osnet_x0_25_msmt17.pt", device=torch.device("mps"), half=False)
+tracker_list = create_tracker(f'ocsort', f"trackers/ocsort/configs/ocsort.yaml", "weights/osnet_x0_25_msmt17.pt", device=torch.device("cuda:0"), half=False)
 
 
 def clean_dict(main_dict,count):
@@ -29,7 +29,7 @@ def clean_dict(main_dict,count):
     return main_dict
 
 # Open the video capture
-source_video_path = "distance.mp4"
+source_video_path = "sari_yelek_v8.mp4"
 video_cap = cv2.VideoCapture(source_video_path)
 
 # Define the distance threshold for considering persons as close
