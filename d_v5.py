@@ -14,51 +14,13 @@ class_names = model.names
 model.classes = [0]
 tracker_list = create_tracker(f'ocsort', f"trackers/ocsort/configs/ocsort.yaml", "weights/osnet_x0_25_msmt17.pt", device=torch.device("mps"), half=False)
 
+#for birdeye view
+width,lenght = 1280,720
+surface_polygon = np.array([[483, 170], [759, 162], [30, 606], [1273, 608]], dtype=np.float32)
+dst_pts = np.array([[0, 0], [width, 0], [0, lenght], [width, lenght]], dtype=np.float32)
+H = cv2.getPerspectiveTransform(surface_polygon, dst_pts)
 
 
-H = np.array([[-7.78384623e+00 ,-8.56667877e+00 , 1.05969372e+04],
-                [-3.71497720e-01 ,-1.29095458e+01 , 4.90599890e+03],
-                [-1.85412136e-04, -7.00396367e-03 , 1.00000000e+00]])
-
-def point_transform(x_old,y_old):
-    H = np.array([[-7.78384623e+00 ,-8.56667877e+00 , 1.05969372e+04],
-                    [-3.71497720e-01 ,-1.29095458e+01 , 4.90599890e+03],
-                    [-1.85412136e-04, -7.00396367e-03 , 1.00000000e+00]])
-    # Create the homogeneous coordinate for the source point
-    source_point = np.array([x_old, y_old, 1])
-    # Perform the transformation
-    transformed_point = np.dot(H, source_point)
-
-    # Normalize the transformed point
-    x_new = int(transformed_point[0] / transformed_point[2])
-    y_new = int(transformed_point[1] / transformed_point[2])
-    return int(x_new),int(y_new) 
-
-# Define a function to draw center points on the bird's-eye view image
-def draw_birdseye_view(center_points):
-
-    birdseye_view = np.zeros((720, 1280, 3), dtype=np.uint8)
-    for center in center_points:
-        # Draw the center point on the bird's-eye view image
-        cv2.circle(birdseye_view, center, 5, (0, 0, 255), -1)
-    
-    return birdseye_view
-
-def clean_dict(main_dict,count):
-    
-    keys_to_delete = []  # Create a list to store keys to delete
-
-    for pair_key, pair_data in main_dict.items():
-        if (count - sliding_windows[pair_key]["last_count"] > disappear_limit):
-            keys_to_delete.append(pair_key)
-            print(f"{pair_key} CLEANED")
-    # Delete items outside the loop
-    for key in keys_to_delete:
-        del main_dict[key]
-    return main_dict
-
-
-    
 # Open the video capture
 source_video_path = "sari_yelek_v8.mp4"
 video_cap = cv2.VideoCapture(source_video_path)
@@ -75,11 +37,41 @@ disappear_limit = 100
 # Dictionary to store sliding windows for each person pair
 sliding_windows = {}
 counter = 0
+
+def point_transform(x_old,y_old):
+    
+    # Create the homogeneous coordinate for the source point
+    source_point = np.array([x_old, y_old, 1])
+    # Perform the transformation
+    transformed_point = np.dot(H, source_point)
+    # Normalize the transformed point
+    x_new = int(transformed_point[0] / transformed_point[2])
+    y_new = int(transformed_point[1] / transformed_point[2])
+    return int(x_new),int(y_new) 
+
+
+def clean_dict(main_dict,count):
+    
+    keys_to_delete = []  # Create a list to store keys to delete
+
+    for pair_key, pair_data in main_dict.items():
+        if (count - sliding_windows[pair_key]["last_count"] > disappear_limit):
+            keys_to_delete.append(pair_key)
+            print(f"{pair_key} CLEANED")
+    # Delete items outside the loop
+    for key in keys_to_delete:
+        del main_dict[key]
+    return main_dict
+
+
+    
+
 while video_cap.isOpened():
     counter += 1 
     last_time = time.time()
-
     ret, frame = video_cap.read()
+    
+    frame = cv2.resize(frame,(width,lenght))
     if not ret:
         break
     
@@ -90,18 +82,14 @@ while video_cap.isOpened():
 
 
 
-    bird_eye_view  = np.zeros((1440, 2560, 3), dtype=np.uint8)
-    cv2.polylines(bird_eye_view, [np.array( [[1046, 424], [649, 1150], [1902, 1115], [1433, 418]], dtype=np.int32)], isClosed=True, color=(0, 0, 255), thickness=2)
-    bird_eye_view2  = np.zeros((1440, 2560, 3), dtype=np.uint8)
-    cv2.polylines(bird_eye_view2, [np.array([[point_transform(961, 383)], [point_transform(164, 1242)], [point_transform(2493, 1217)], [point_transform(1573, 377)]], dtype=np.int32)], isClosed=True, color=(0, 0, 255), thickness=2)
-
-
-
-
+    # bird_eye_view  = np.zeros((1440, 2560, 3), dtype=np.uint8)
+    # cv2.polylines(bird_eye_view, [np.array( [[1046, 424], [649, 1150], [1902, 1115], [1433, 418]], dtype=np.int32)], isClosed=True, color=(0, 0, 255), thickness=2)
+    bird_eye_view2  = np.zeros((lenght, width, 3), dtype=np.uint8)
+    #cv2.polylines(bird_eye_view2, [np.array([[point_transform(961, 383)], [point_transform(164, 1242)], [point_transform(2493, 1217)], [point_transform(1573, 377)]], dtype=np.int32)], isClosed=True, color=(0, 0, 255), thickness=2)
+    
 
     if det is not None and len(det):
         outputs = tracker_list.update(det.cpu(), frame)
-
         # Extract the IDs from the outputs
         ids = outputs[:, 4]
         
@@ -121,8 +109,7 @@ while video_cap.isOpened():
             bbox1 = outputs[ids == id1][0, :4]
             bbox2 = outputs[ids == id2][0, :4]
 
-            # center1 = ((bbox1[0] + bbox1[2]) / 2, (bbox1[1] + bbox1[3]) / 2)
-            # center2 = ((bbox2[0] + bbox2[2]) / 2, (bbox2[1] + bbox2[3]) / 2)
+
             center1 = ((bbox1[0] + bbox1[2]) / 2, bbox1[3])
             center2 = ((bbox2[0] + bbox2[2]) / 2, bbox2[3])
             
@@ -133,13 +120,15 @@ while video_cap.isOpened():
 
 
 
-            # bird_eye_view = cv2.circle(bird_eye_view, (int(center1[0]),int(center1[1])), 5, (0, 0, 255), -1)
-            # bird_eye_view = cv2.circle(bird_eye_view, (int(center2[0]),int(center2[1])), 5, (0, 0, 255), -1)
-            # #cv2.line(bird_eye_view, (int(center1[0]), int(center1[1])), (int(center2[0]), int(center2[1])), (0,255,20), 6)
 
+            cv2.line(bird_eye_view2, (int(transformed_center1[0]), int(transformed_center1[1])), 
+                     (int(transformed_center2[0]), int(transformed_center2[1])), (200,222,20), 6)
+            cv2.circle(bird_eye_view2, (int(transformed_center1[0]),int(transformed_center1[1])), 5, (0, 0, 255), 3)
+            cv2.circle(bird_eye_view2, (int(transformed_center2[0]),int(transformed_center2[1])), 5, (0, 0, 255), 3)
+            
+            
             # Calculate the Euclidean distance between the centers
             transformed_distance = int(np.linalg.norm(np.array(transformed_center1) - np.array(transformed_center2)))
-            
             distance = int(np.linalg.norm(np.array(center1) - np.array(center2)))
 
 
@@ -175,7 +164,7 @@ while video_cap.isOpened():
 
         #print(sliding_windows["1-3"]["elements"])
     fps = int(1 / (time.time() - last_time))
-    cv2.putText(frame, f"{fps}", (30, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (209, 20, 209), 4)
+    cv2.putText(bird_eye_view2, f"{fps}", (30, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (209, 20, 209), 4)
 
 
 
@@ -193,11 +182,11 @@ while video_cap.isOpened():
     
     # bird_eye_view = cv2.resize(bird_eye_view, (800, 520))
     # bird_eye_view2 = cv2.resize(bird_eye_view2, (800, 520))
-    stacked = np.hstack((frame,transformed_frame))
+    #stacked = np.hstack((frame,transformed_frame))
     
     
     
-    cv2.imshow("Frame1", stacked)
+    cv2.imshow("Frame1", bird_eye_view2)
     # Press 'q' to exit
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
