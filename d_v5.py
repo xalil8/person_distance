@@ -26,14 +26,15 @@ source_video_path = "sari_yelek_v8.mp4"
 video_cap = cv2.VideoCapture(source_video_path)
 
 # Define the distance threshold for considering persons as close
-distance_threshold = 300  # in pixels
+distance_threshold = 1000  # in pixels
 
 # Define time intervals for checking proximity
-check_interval = 15 * 60  # 15 minutes in seconds
+#check_interval = 15 * 60  # 15 minutes in seconds
 
 # Define the sliding window size
-window_size = 300
+window_size = 50
 disappear_limit = 100
+disappear_ratio = 0.9 # %90 of frames should be appeared
 # Dictionary to store sliding windows for each person pair
 sliding_windows = {}
 counter = 0
@@ -55,7 +56,7 @@ def clean_dict(main_dict,count):
     keys_to_delete = []  # Create a list to store keys to delete
 
     for pair_key, pair_data in main_dict.items():
-        if (count - sliding_windows[pair_key]["last_count"] > disappear_limit):
+        if (count - main_dict[pair_key]["last_count"] > disappear_limit):
             keys_to_delete.append(pair_key)
             print(f"{pair_key} CLEANED")
     # Delete items outside the loop
@@ -70,20 +71,16 @@ while video_cap.isOpened():
     counter += 1 
     last_time = time.time()
     ret, frame = video_cap.read()
-    
-    frame = cv2.resize(frame,(width,lenght))
     if not ret:
         break
-    
+    if counter % 2 != 0:
+        continue
     tracking_list = []
+    frame = cv2.resize(frame,(width,lenght))
 
     results = model(frame)
     det = results.xyxy[0]
 
-
-
-    # bird_eye_view  = np.zeros((1440, 2560, 3), dtype=np.uint8)
-    # cv2.polylines(bird_eye_view, [np.array( [[1046, 424], [649, 1150], [1902, 1115], [1433, 418]], dtype=np.int32)], isClosed=True, color=(0, 0, 255), thickness=2)
     bird_eye_view2  = np.zeros((lenght, width, 3), dtype=np.uint8)
     #cv2.polylines(bird_eye_view2, [np.array([[point_transform(961, 383)], [point_transform(164, 1242)], [point_transform(2493, 1217)], [point_transform(1573, 377)]], dtype=np.int32)], isClosed=True, color=(0, 0, 255), thickness=2)
     
@@ -116,7 +113,7 @@ while video_cap.isOpened():
             transformed_center1 = point_transform(center1[0],center1[1])
             transformed_center2 = point_transform(center2[0],center2[1])
 
-            transformed_frame = cv2.warpPerspective(frame, H, (frame.shape[1], frame.shape[0]))
+            #transformed_frame = cv2.warpPerspective(frame, H, (frame.shape[1], frame.shape[0]))
 
 
 
@@ -147,18 +144,18 @@ while video_cap.isOpened():
                 sliding_windows[pair_key]["elements"].append(False)
 
             # Check if %80 of the 100 elements in the sliding window are True
-            if len(sliding_windows[pair_key]) == window_size and sliding_windows[pair_key].count(True) / window_size >= 0.9:
+            if len(sliding_windows[pair_key]["elements"]) == window_size and sliding_windows[pair_key]["elements"].count(True) / window_size >= disappear_ratio:
                 # Add your desired logic here
                 pass
             
             cv2.putText(frame, f"{distance}", (int((center1[0] + center2[0]) / 2), int((center1[1] + center2[1]) / 2)),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
+                         cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
             cv2.line(frame, (int(center1[0]), int(center1[1])), (int(center2[0]), int(center2[1])), color, 6)
             
             #### transformed
-            cv2.putText(transformed_frame, f"{transformed_distance}", (int((transformed_center1[0] + transformed_center2[0]) / 2), int((transformed_center1[1] + transformed_center2[1]) / 2)),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
-            cv2.line(transformed_frame, (int(transformed_center1[0]), int(transformed_center1[1])), (int(transformed_center2[0]), int(transformed_center2[1])), color, 6)
+            cv2.putText(bird_eye_view2, f"{transformed_distance}", (int((transformed_center1[0] + transformed_center2[0]) / 2), int((transformed_center1[1] + transformed_center2[1]) / 2)),
+                         cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
+            # cv2.line(transformed_frame, (int(transformed_center1[0]), int(transformed_center1[1])), (int(transformed_center2[0]), int(transformed_center2[1])), color, 6)
 
 
 
@@ -176,17 +173,16 @@ while video_cap.isOpened():
     #     print(counter,sliding_windows[pair_key]["last_count"])
     # print("//////////////////////////////////////////////////")
     
-    transformed_frame = cv2.resize(transformed_frame, (800, 520))
-    frame = cv2.resize(frame, (800, 520))
+    #transformed_frame = cv2.resize(transformed_frame, (800, 520))
+    #frame = cv2.resize(frame, (800, 520))
     
     
-    # bird_eye_view = cv2.resize(bird_eye_view, (800, 520))
-    # bird_eye_view2 = cv2.resize(bird_eye_view2, (800, 520))
-    #stacked = np.hstack((frame,transformed_frame))
+    bird_eye_view2 = cv2.resize(bird_eye_view2, (1280, 720))
+    stacked = np.hstack((frame,bird_eye_view2))
     
     
     
-    cv2.imshow("Frame1", bird_eye_view2)
+    cv2.imshow("Frame1", stacked)
     # Press 'q' to exit
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
